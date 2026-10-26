@@ -7,12 +7,12 @@ from datetime import datetime, timezone
 import msal
 import requests
 
-from ..parser import clean_body, html_to_text, parse_date
+from ..parser import clean_body, html_to_text, is_bulk, parse_date
 from .base import RawEmail
 
 GRAPH = "https://graph.microsoft.com/v1.0"
 SCOPES = ["Mail.Read"]
-_SELECT = "id,internetMessageId,subject,from,receivedDateTime,body,webLink"
+_SELECT = "id,internetMessageId,subject,from,receivedDateTime,body,webLink,internetMessageHeaders"
 
 
 class GraphAuthError(RuntimeError):
@@ -45,6 +45,7 @@ def to_raw_email(msg: dict, account: str, max_body_chars: int) -> RawEmail:
         received=_parse_graph_dt(msg.get("receivedDateTime")),
         body=clean_body(content, max_body_chars),
         link=msg.get("webLink", ""),
+        bulk=is_bulk({h["name"]: h.get("value", "") for h in msg.get("internetMessageHeaders") or []}),
     )
 
 

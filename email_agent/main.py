@@ -49,6 +49,20 @@ def load_fixtures(root: Path, max_chars: int) -> list[RawEmail]:
             for p in sorted(root.glob("*/*.eml"))]
 
 
+def split_bulk(emails: list[RawEmail], important_senders: list[str]) -> tuple[list[RawEmail], list[RawEmail]]:
+    """Personal mail goes to Claude (school/important senders first); bulk mail is only listed.
+
+    Ordering matters: when the daily budget runs out, emails at the end are listed by subject only.
+    """
+    def important(e: RawEmail) -> bool:
+        return any(s in e.sender.lower() for s in important_senders)
+
+    personal = [e for e in emails if not e.bulk or important(e)]
+    bulk = [e for e in emails if e.bulk and not important(e)]
+    personal.sort(key=lambda e: (not important(e), -e.received.timestamp()))
+    return personal, bulk
+
+
 def collect(sources: list[Source], since: datetime) -> tuple[list[RawEmail], list[str]]:
     emails: list[RawEmail] = []
     errors: list[str] = []
@@ -87,22 +101,26 @@ def main(argv: list[str] | None = None) -> int:
         emails, errors = fetched, errors + fetch_errors
 
     emails = [e for e in dedupe(emails) if not e.subject.startswith(DIGEST_SUBJECT_PREFIX)]
-    log.info("%d unique emails to summarize", len(emails))
+    personal, bulk = split_bulk(emails, cfg.important_senders)
+    log.info("%d unique emails: %d to summarize, %d newsletters/promotions listed only",
+             len(emails), len(personal), len(bulk))
 
     digest: Digest
     if args.no_llm or not cfg.anthropic_api_key:
         if not args.no_llm:
             errors.append("未设置 ANTHROPIC_API_KEY，仅列出标题")
-        digest = fallback_digest(emails)
+        digest = fallback_digest(personal)
     else:
         try:
-            digest = Summarizer(cfg.model, cfg.effort, cfg.batch_size, cfg.anthropic_api_key).summarize(emails)
+            summarizer = Summarizer(cfg.model, cfg.effort, cfg.daily_budget_usd, cfg.anthropic_api_key)
+            digest = summarizer.summarize(personal)
         except Exception as exc:
             log.exception("Claude summarization failed")
             errors.append(f"AI 摘要失败，仅列出标题: {exc}")
-            digest = fallback_digest(emails)
+            digest = fallback_digest(personal)
 
-    html = render_digest(digest, emails, errors, now)
+    html = render_digest(digest, personal, bulk, errors, now)
+    emails = personal + bulk
     n_actions = sum(it.action_required for it in digest.items)
     subject = f"{DIGEST_SUBJECT_PREFIX} {now:%m/%d} · {len(emails)} 封" + (f" · {n_actions} 件待办" if n_actions else "")
 

@@ -46,8 +46,20 @@
   </div>
   {% endfor %}
 
+  {% if bulk_by_sender %}
+  <div style="background:#fff;border-radius:10px;padding:14px 18px;margin-bottom:12px;color:#57534e;">
+    <div style="font-weight:600;margin-bottom:6px;color:#1c1917;">订阅 / 推广（{{ bulk_count }} 封，未经 AI）</div>
+    {% for sender, items in bulk_by_sender %}
+    <div style="padding:5px 0;border-top:1px solid #f0efed;font-size:13px;">
+      <b>{{ sender }}</b>{% if items|length > 1 %} ×{{ items|length }}{% endif %}：
+      {% for e in items %}{% if e.link %}<a href="{{ e.link }}" style="color:#57534e;">{{ e.subject }}</a>{% else %}{{ e.subject }}{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div style="color:#a8a29e;font-size:12px;margin-top:20px;line-height:1.6;">
-    {% if promo_count %}已折叠 {{ promo_count }} 封推广邮件。<br>{% endif %}
+    {% if cost_usd %}本次 AI 成本 ${{ '%.3f'|format(cost_usd) }}<br>{% endif %}
     {% for err in errors %}<span style="color:#dc2626;">⚠️ {{ err }}</span><br>{% endfor %}
     由 samson_agent / email_agent 自动生成
   </div>
