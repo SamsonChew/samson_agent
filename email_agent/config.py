@@ -16,8 +16,14 @@ def _env(name: str, default: str = "") -> str:
 class Config:
     # Claude
     anthropic_api_key: str = field(default_factory=lambda: _env("ANTHROPIC_API_KEY"))
-    model: str = field(default_factory=lambda: _env("DIGEST_MODEL", "claude-opus-5-5"))
-    effort: str = field(default_factory=lambda: _env("DIGEST_EFFORT", "medium"))
+    model: str = field(default_factory=lambda: _env("DIGEST_MODEL", "claude-sonnet-5-5"))
+    effort: str = field(default_factory=lambda: _env("DIGEST_EFFORT", "low"))
+    # Hard cap per run; 0.065 * 31 days ≈ $2/month even in the worst case.
+    daily_budget_usd: float = field(default_factory=lambda: float(_env("DIGEST_DAILY_BUDGET_USD", "0.065")))
+    # Bulk mail from these sender substrings still goes to Claude (school notices often look like newsletters).
+    important_senders: list[str] = field(default_factory=lambda: [
+        s.strip().lower() for s in _env("DIGEST_IMPORTANT_SENDERS", "nus.edu.sg,u.nus.edu,canvas,instructure").split(",")
+        if s.strip()])
 
     # Gmail (IMAP read + SMTP send share one App Password)
     gmail_user: str = field(default_factory=lambda: _env("GMAIL_USER"))
@@ -32,8 +38,7 @@ class Config:
     digest_to: str = field(default_factory=lambda: _env("DIGEST_TO"))
     hours: int = field(default_factory=lambda: int(_env("DIGEST_HOURS", "24")))
     timezone: str = field(default_factory=lambda: _env("DIGEST_TZ", "Asia/Singapore"))
-    max_body_chars: int = field(default_factory=lambda: int(_env("DIGEST_MAX_BODY_CHARS", "4000")))
-    batch_size: int = field(default_factory=lambda: int(_env("DIGEST_BATCH_SIZE", "60")))
+    max_body_chars: int = field(default_factory=lambda: int(_env("DIGEST_MAX_BODY_CHARS", "1500")))
 
     @property
     def recipient(self) -> str:

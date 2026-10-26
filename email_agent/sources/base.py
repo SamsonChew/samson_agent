@@ -16,6 +16,7 @@ class RawEmail:
     received: datetime  # timezone-aware
     body: str  # cleaned plain text
     link: str = ""  # deep link back to the original message, if known
+    bulk: bool = False  # mailing list / newsletter / marketing (List-Unsubscribe, Precedence: bulk)
 
 
 class Source(Protocol):

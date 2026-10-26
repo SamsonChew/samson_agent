@@ -83,6 +83,13 @@ def parse_date(value: str | None) -> datetime:
     return datetime.now(timezone.utc)
 
 
+def is_bulk(headers: dict[str, str]) -> bool:
+    """Newsletters, mailing lists and marketing carry these headers; personal mail doesn't."""
+    h = {k.lower(): v for k, v in headers.items()}
+    return ("list-unsubscribe" in h or "list-id" in h
+            or h.get("precedence", "").strip().lower() in ("bulk", "list", "junk"))
+
+
 def parse_mime(raw: bytes, max_chars: int = 4000) -> dict:
     """Parse raw RFC822 bytes into the fields RawEmail needs."""
     msg = message_from_bytes(raw, policy=policy.default)
@@ -92,4 +99,5 @@ def parse_mime(raw: bytes, max_chars: int = 4000) -> dict:
         "sender": str(msg.get("From", "")),
         "received": parse_date(msg.get("Date")),
         "body": clean_body(_best_body(msg), max_chars),
+        "bulk": is_bulk({k: str(v) for k, v in msg.items()}),
     }

@@ -15,6 +15,12 @@ GitHub Actions (cron) → Gmail (IMAP) + NUS (Microsoft Graph)
 
 邮件只读，不会被标为已读。某个邮箱出错时另一个照常摘要；Claude 不可用时退化为只列标题。
 
+**省钱设计**（目标 < $2/月）：
+- 模型 `claude-sonnet-5-5`，effort `low`，关闭 thinking。
+- 订阅/推广邮件（带 `List-Unsubscribe` / `Precedence: bulk` 头）**不发给 Claude**，只按发件人列标题；但 NUS / Canvas 发件人例外，照样摘要。
+- 每次运行有硬预算 `DIGEST_DAILY_BUDGET_USD=0.065`（×31 天 ≈ $2）：按最坏情况（输出写满）预估，邮件多时先缩短正文，再退化为只发标题，超出部分只列标题。学校邮件排最前，优先拿到预算。
+- 每封摘要底部显示本次实际 AI 成本。
+
 ## 一次性设置
 
 ### 1. Gmail App Password
@@ -52,7 +58,7 @@ NUS Outlook 网页版 → 设置 → 邮件 → 转发 → 转发到你的 Gmail
 
 | Secret | 值 |
 |---|---|
-| `ANTHROPIC_API_KEY` | https://console.anthropic.com 生成 |
+| `ANTHROPIC_API_KEY` | https://console.anthropic.com 生成；建议在 Console → Limits 设每月 $2 上限作为双保险 |
 | `GMAIL_USER` | `samsonchewjunjie@gmail.com` |
 | `GMAIL_APP_PASSWORD` | 第 1 步的 16 位密码 |
 | `NUS_CLIENT_ID` | 第 2 步的 client id |
@@ -66,15 +72,19 @@ GitHub 的定时 (`schedule`) workflow **只在默认分支 (main) 上运行**�
 ## 可选环境变量
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DIGEST_MODEL` | `claude-opus-5-5` | 摘要用的模型 |
-| `DIGEST_EFFORT` | `medium` | `low` 更省钱，`high` 更细 |
+| `DIGEST_MODEL` | `claude-sonnet-5-5` | 摘要用的模型（`claude-haiku-5-5` 更便宜约 20 倍）|
+| `DIGEST_EFFORT` | `low` | `medium` 更细但更贵 |
+| `DIGEST_DAILY_BUDGET_USD` | `0.065` | 单次运行成本上限（美元）|
+| `DIGEST_IMPORTANT_SENDERS` | `nus.edu.sg,u.nus.edu,canvas,instructure` | 即使是群发也要摘要的发件人（逗号分隔，子串匹配）|
 | `DIGEST_HOURS` | `24` | 回看窗口 |
 | `DIGEST_TZ` | `Asia/Singapore` | 摘要日期时区 |
-| `DIGEST_MAX_BODY_CHARS` | `4000` | 每封正文截断长度 |
-| `DIGEST_BATCH_SIZE` | `60` | 每次请求的邮件数，超过会分批再合并重点 |
+| `DIGEST_MAX_BODY_CHARS` | `1500` | 每封正文截断长度 |
 
 ## 成本
-约 50–80 封/天 ≈ 每天 $0.3–0.4（≈ $10/月，Claude Opus 5.5）。
+Sonnet 5.5 价格 $2 / $10 每百万 token（输入/输出）。
+- 典型一天 ~20 封个人邮件 ≈ 9k 输入 + 1.2k 输出 ≈ $0.03 → **约 $0.9/月**。
+- 最坏情况被预算锁死在 $0.065 × 90% × 31 ≈ **$1.8/月**。
+- 预算下的处理量：≤20 封全文；~40 封缩短正文；>55 封后只列标题。
 
 ## 本地运行
 ```bash
