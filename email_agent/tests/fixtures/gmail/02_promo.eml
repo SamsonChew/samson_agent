@@ -1,0 +1,13 @@
+From: Shopee <promo@shopee.example>
+To: samsonchewjunjie@gmail.com
+Subject: 11.11 mega sale starts now!
+Date: Mon, 26 Oct 2026 06:00:00 +0800
+Message-ID: <promo-123@shopee.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/html; charset=utf-8
+
+<html><head><style>.x{color:red}</style></head><body><h1>Up to 90% off</h1><p>Free shipping&nbsp;on all orders<br>Ends 11 Nov.</p><script>track()</script></body></html>
+--b1--
