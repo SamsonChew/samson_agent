@@ -1,0 +1,35 @@
+name: email-agent daily digest
+
+on:
+  schedule:
+    - cron: "0 23 * * *"  # 07:00 Singapore time
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Look-back window in hours"
+        required: false
+        default: "24"
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: email_agent/requirements.txt
+      - run: pip install -r email_agent/requirements.txt
+      - run: python -m pytest email_agent/tests -q
+      - name: Build and send digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NUS_CLIENT_ID: ${{ secrets.NUS_CLIENT_ID }}
+          NUS_REFRESH_TOKEN: ${{ secrets.NUS_REFRESH_TOKEN }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+          DIGEST_HOURS: ${{ github.event.inputs.hours || '24' }}
+        run: python -m email_agent.main
